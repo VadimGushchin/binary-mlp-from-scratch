@@ -30,6 +30,7 @@ def prepare_data(
     filepath="./data/training.csv",
     threshold=30,
     min_group_size=10,
+    drop_cols=None,
 ):
     """
     Загружает и обрабатывает данные для задачи бинарной классификации.
@@ -43,6 +44,8 @@ def prepare_data(
         Максимальное число уникальных значений для OHE; выше – CountEncoder.
     min_group_size : int, default=10
         Минимальный размер группы для CountEncoder (редкие объединяются).
+    drop_cols : list of str, optional
+        Список колонок для удаления из X (включая IsBadBuy). Если None, используется стандартный список.
 
     Returns
     -------
@@ -69,21 +72,24 @@ def prepare_data(
         preprocess_split(df, base_date) for df in [train_df, val_df, test_df]
     ]
 
-    drop_cols = [
-        "IsBadBuy",
-        "PurchDate",
-        "year",
-        "IsOnlineSale",
-        "is_weekend",
-        "PRIMEUNIT",
-        "AUCGUART",
-        "WheelTypeID",
-        "days_since_start",
-        "Color",
-        "Auction",
-        "Nationality",
-        "Size",
-    ]
+    if drop_cols is None:
+        drop_cols = [
+            "IsBadBuy",
+            "PurchDate",
+            "year",
+            "IsOnlineSale",
+            "is_weekend",
+            "PRIMEUNIT",
+            "AUCGUART",
+            "WheelTypeID",
+            "days_since_start",
+        ]
+    else:
+        mandatory_drop = ["IsBadBuy", "PurchDate"]
+        for col in mandatory_drop:
+            if col not in drop_cols:
+                drop_cols.append(col)
+
     X_train_raw, X_val_raw, X_test_raw = [
         df.drop(columns=drop_cols) for df in [train_df, val_df, test_df]
     ]
@@ -94,7 +100,6 @@ def prepare_data(
         df.astype(to_object) for df in [X_train_raw, X_val_raw, X_test_raw]
     ]
 
-    threshold = 30
     cat_cols = X_train_raw.select_dtypes(
         include=["object", "category"]
     ).columns.tolist()
@@ -147,4 +152,4 @@ def prepare_data(
     X_val = pipeline.transform(X_val_raw)
     X_test = pipeline.transform(X_test_raw)
 
-    return X_train, X_val, X_test, y_train, y_val, y_test
+    return X_train, X_val, X_test, y_train, y_val, y_test, pipeline
